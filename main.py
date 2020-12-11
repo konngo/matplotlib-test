@@ -3,19 +3,38 @@ from tkinter import *
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import tkinter.simpledialog as simpledialog
 
+from dbutil import db
+
+# 显示成绩柱状图
 def show_score():
-    labels = ['G1', 'G2', 'G3', 'G4', 'G5']
-    men_means = [20, 34, 30, 35, 27]
-    women_means = [25, 32, 34, 20, 25]
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    sql = "select course from scores group by course order by course "
+    labels = []
+    for i in db().select(sql): labels.append(i[0])
+    print(labels)
+    sql="select max(score) from scores group by course order by course "
+    high =[]
+    for i in db().select(sql): high.append(i[0])
+    print(high)
+    sql="select cast(avg(score) as int) from scores group by course order by course "
+    medium = []
+    for i in db().select(sql): medium.append(i[0])
+    print(medium)
+    sql="select min(score) from scores group by course order by course "
+    low =  []
+    for i in db().select(sql): low.append(i[0])
+    print(low)
     x = np.arange(len(labels))  # the label locations
     width = 0.35  # the width of the bars
     fig, ax = plt.subplots()
-    rects1 = ax.bar(x - width / 2, men_means, width, label='Men')
-    rects2 = ax.bar(x + width / 2, women_means, width, label='Women')
+    rects1 = ax.bar(x - width*2/3, high, width  , label='最高分')
+    rects2 = ax.bar(x, medium, width , label='平均分')
+    rects3 = ax.bar(x + width*2/3 , low, width, label='最低分')
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('Scores')
-    ax.set_title('Scores by group and gender')
+    ax.set_ylabel('成绩')
+    ax.set_title('成绩信息统计')
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
     ax.legend()
@@ -32,25 +51,38 @@ def show_score():
 
     autolabel(rects1)
     autolabel(rects2)
+    autolabel(rects3)
     fig.tight_layout()
     plt.show()
 
 def show_course(course):
-    labels = 'Frogs', 'Hogs', 'Dogs', 'Logs'
-    sizes = [15, 230, 45, 10]
-    explode = (0, 0.1, 0, 0)
+    scores=[0,0,0,0,0]
+    for s in course:
+        if s[3]<=60: scores[0]=scores[0]+1
+        if s[3]<=70 and s[3]>61: scores[0]=scores[0]+1
+        if s[3]<=80 and s[3]>71: scores[1]=scores[1]+1
+        if s[3]<=90 and s[3]>81: scores[2]=scores[2]+1
+        if s[3]<=100 and s[3]>90: scores[3]=scores[3]+1
+
+    labels = '90~100', '81~90', '71~80', '61~70', '60以下'
+    sizes = scores
 
     fig1, ax1 = plt.subplots()
-    ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
+    ax1.pie(sizes, labels=labels, autopct='%1.1f%%',
             shadow=True, startangle=90)
     ax1.axis('equal')
     plt.show()
 
 def show_student(stu):
     matplotlib.rcParams['font.family'] = 'Simhei'
-    radar_labels = np.array(['数学', '语文', '英语', '化学', '物理', '地理'])
-    data = np.array([55, 78, 12, 74, 23, 86])
-    angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
+    course=[]
+    scores=[]
+    for s in stu:
+        course.append(s[2])
+        scores.append(s[3])
+    radar_labels = np.array(course)
+    data = np.array(scores)
+    angles = np.linspace(0, 2 * np.pi, len(course), endpoint=False)
     fig = plt.figure(facecolor="white")
     plt.subplot(111, polar=True)
     plt.plot(angles, data, 'o-', linewidth=1, alpha=0.2)
@@ -78,18 +110,24 @@ class menu (object):
         # 3. 课程成绩
         Button(self.page, text='课程成绩分布', command=self.scores).grid(row=3,column=1, stick=E, pady=10)        # 2. 指定课程信息统计
 
+    # 学生按钮点击
     def student(self):
-        show_student(1)
+        # 输入学号
+        stu=simpledialog.askstring('学号','请输入学号')
+        sql="select * from scores where stu='"+stu+"'"
+        result=db().select(sql)
+        show_student(result)
 
-
+    # 课程按钮点击
     def course(self):
-        print("student1")
-        show_course(1)
+        course = simpledialog.askstring('课程', '请输入课程名')
+        sql="select * from scores where course='"+course+"'"
+        result=db().select(sql)
+        show_course(result)
 
-
+    # 成绩按钮点击
     def scores(self):
         show_score()
-        print("student2")
 
 
 
